@@ -12,7 +12,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from backend.log_parser import strip_ansi, parse_training_line, parse_colmap_line
 
 
-# ── strip_ansi ───────────────────────────────────────────────────────────────
+# -- strip_ansi ---------------------------------------------------------------
 
 
 class TestStripAnsi:
@@ -26,10 +26,11 @@ class TestStripAnsi:
         assert strip_ansi("") == ""
 
     def test_multiple_ansi_codes(self):
-        assert strip_ansi("\x1b[1;31mERROR\x1b[0m: \x1b[33mwarning\x1b[0m") == "ERROR: warning"
+        raw = "\x1b[1;31mERROR\x1b[0m: \x1b[33mwarning\x1b[0m"
+        assert strip_ansi(raw) == "ERROR: warning"
 
 
-# ── parse_training_line: iteration ───────────────────────────────────────────
+# -- parse_training_line: iteration --------------------------------------------
 
 
 class TestParseTrainingIteration:
@@ -49,7 +50,7 @@ class TestParseTrainingIteration:
         assert result["iteration"] == 250
 
 
-# ── parse_training_line: loss ────────────────────────────────────────────────
+# -- parse_training_line: loss -------------------------------------------------
 
 
 class TestParseTrainingLoss:
@@ -74,7 +75,7 @@ class TestParseTrainingLoss:
         assert abs(result["loss"] - 12.0) < 1e-6
 
 
-# ── parse_training_line: psnr ────────────────────────────────────────────────
+# -- parse_training_line: psnr -------------------------------------------------
 
 
 class TestParseTrainingPsnr:
@@ -89,11 +90,11 @@ class TestParseTrainingPsnr:
         assert abs(result["psnr"] - 27.3) < 1e-6
 
 
-# ── parse_training_line: combined ────────────────────────────────────────────
+# -- parse_training_line: combined (full line) ---------------------------------
 
 
 class TestParseTrainingCombined:
-    def test_full_line(self):
+    def test_full_line_extracts_all_fields(self):
         line = "Step 12450/30000 loss=0.0042 psnr=27.3 num_gaussians=1200000"
         result = parse_training_line(line)
         assert result is not None
@@ -103,7 +104,7 @@ class TestParseTrainingCombined:
         assert result["num_gaussians"] == 1200000
 
 
-# ── parse_training_line: gaussians ───────────────────────────────────────────
+# -- parse_training_line: gaussians --------------------------------------------
 
 
 class TestParseTrainingGaussians:
@@ -118,13 +119,12 @@ class TestParseTrainingGaussians:
         assert result["num_gaussians"] == 500000
 
     def test_small_count_ignored(self):
-        """Gaussian counts <= 1000 are likely not gaussian counts."""
+        """Gaussian counts <= 1000 are likely not actual gaussian counts."""
         result = parse_training_line("num_gaussians: 500")
-        # Should be None because 500 is below the threshold
         assert result is None
 
 
-# ── parse_training_line: junk / unrecognized lines ───────────────────────────
+# -- parse_training_line: junk / unrecognised lines ----------------------------
 
 
 class TestParseTrainingJunk:
@@ -141,7 +141,7 @@ class TestParseTrainingJunk:
         assert parse_training_line("   \t\n  ") is None
 
 
-# ── parse_training_line: ANSI codes ──────────────────────────────────────────
+# -- parse_training_line: ANSI codes ------------------------------------------
 
 
 class TestParseTrainingWithAnsi:
@@ -153,7 +153,7 @@ class TestParseTrainingWithAnsi:
         assert abs(result["loss"] - 0.0234) < 1e-6
 
 
-# ── parse_colmap_line: registered images ─────────────────────────────────────
+# -- parse_colmap_line: registered images --------------------------------------
 
 
 class TestParseColmapRegistered:
@@ -168,7 +168,7 @@ class TestParseColmapRegistered:
         assert result["registered_images"] == 287
 
 
-# ── parse_colmap_line: points ────────────────────────────────────────────────
+# -- parse_colmap_line: 3D points ---------------------------------------------
 
 
 class TestParseColmapPoints:
@@ -178,7 +178,7 @@ class TestParseColmapPoints:
         assert result["num_points3d"] == 45231
 
 
-# ── parse_colmap_line: reprojection error ────────────────────────────────────
+# -- parse_colmap_line: reprojection error -------------------------------------
 
 
 class TestParseColmapReprojectionError:
@@ -188,24 +188,21 @@ class TestParseColmapReprojectionError:
         assert abs(result["reprojection_error"] - 0.8432) < 1e-6
 
 
-# ── parse_colmap_line: junk ──────────────────────────────────────────────────
+# -- parse_colmap_line: junk ---------------------------------------------------
 
 
 class TestParseColmapJunk:
     def test_bundle_adjustment(self):
-        result = parse_colmap_line("Running bundle adjustment...")
-        assert result is None or result == {}
+        assert parse_colmap_line("Running bundle adjustment...") is None
 
     def test_empty_string(self):
-        result = parse_colmap_line("")
-        assert result is None
+        assert parse_colmap_line("") is None
 
     def test_random_line(self):
-        result = parse_colmap_line("Some unrelated COLMAP output")
-        assert result is None
+        assert parse_colmap_line("Some unrelated COLMAP output") is None
 
 
-# ── parse_colmap_line: with ANSI codes ───────────────────────────────────────
+# -- parse_colmap_line: with ANSI codes ----------------------------------------
 
 
 class TestParseColmapWithAnsi:
