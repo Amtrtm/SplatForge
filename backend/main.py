@@ -12,6 +12,7 @@ import asyncio
 import json
 import os
 import re
+from contextlib import asynccontextmanager
 from pathlib import Path
 from uuid import uuid4
 
@@ -26,18 +27,6 @@ from backend.config import (
 )
 from backend.pipeline import PipelineOrchestrator
 
-# ── FastAPI application ──────────────────────────────────────────────────────
-
-app = FastAPI(title="SplatForge")
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
 # ── In-memory state ─────────────────────────────────────────────────────────
 
 jobs: dict[str, dict] = {}            # job_id -> {status, pipeline, task, video_info, ...}
@@ -46,12 +35,26 @@ subscribers: dict[str, list[asyncio.Queue]] = {}  # job_id -> [Queue, ...]
 # Mock mode (global default, can be overridden per-request)
 MOCK_MODE: bool = os.environ.get("SPLATFORGE_MOCK", "0") == "1"
 
-# ── Startup ──────────────────────────────────────────────────────────────────
+# ── Lifespan ─────────────────────────────────────────────────────────────────
 
 
-@app.on_event("startup")
-async def startup() -> None:
+@asynccontextmanager
+async def lifespan(app: FastAPI):
     JOBS_DIR.mkdir(parents=True, exist_ok=True)
+    yield
+
+
+# ── FastAPI application ──────────────────────────────────────────────────────
+
+app = FastAPI(title="SplatForge", lifespan=lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 # ── POST /api/upload ─────────────────────────────────────────────────────────
@@ -426,7 +429,12 @@ if FRONTEND_DIR.exists():
 # ── Entry point ──────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
+    import sys
     import uvicorn
+
+    # Ensure stdout can handle UTF-8 on Windows
+    if sys.platform == "win32":
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
     print("\n  ╔══════════════════════════════════════╗")
     print("  ║  SPLATFORGE — Video to Splat Engine  ║")
