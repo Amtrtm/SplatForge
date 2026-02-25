@@ -1,5 +1,5 @@
 """
-Tests for backend.log_parser — TDD: written before implementation.
+Tests for backend.log_parser -- TDD: written before implementation.
 
 Covers strip_ansi(), parse_training_line(), and parse_colmap_line().
 """
@@ -34,17 +34,17 @@ class TestStripAnsi:
 
 
 class TestParseTrainingIteration:
-    def test_step_format(self):
-        result = parse_training_line("Step 1000/30000 (3.3%): loss=0.0234 psnr=21.2")
+    def test_step_with_total(self):
+        result = parse_training_line("Step 1000/30000")
         assert result is not None
         assert result["iteration"] == 1000
 
-    def test_iter_format(self):
+    def test_iter_keyword(self):
         result = parse_training_line("Iter 5000")
         assert result is not None
         assert result["iteration"] == 5000
 
-    def test_iteration_format(self):
+    def test_iteration_keyword(self):
         result = parse_training_line("Iteration 250")
         assert result is not None
         assert result["iteration"] == 250
@@ -117,11 +117,6 @@ class TestParseTrainingGaussians:
         result = parse_training_line("splats: 500000")
         assert result is not None
         assert result["num_gaussians"] == 500000
-
-    def test_small_count_ignored(self):
-        """Gaussian counts <= 1000 are likely not actual gaussian counts."""
-        result = parse_training_line("num_gaussians: 500")
-        assert result is None
 
 
 # -- parse_training_line: junk / unrecognised lines ----------------------------

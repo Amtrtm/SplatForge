@@ -64,9 +64,7 @@ def parse_training_line(line: str) -> dict | None:
 
         m = _GAUSS_RE.search(line)
         if m:
-            val = int(m.group(1).replace(",", ""))
-            if val > 1000:
-                result["num_gaussians"] = val
+            result["num_gaussians"] = int(m.group(1).replace(",", ""))
 
         return result if result else None
     except Exception:
